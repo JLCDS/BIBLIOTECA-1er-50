@@ -1,10 +1,9 @@
 package interfaz;
-
 import model.Autor;
 import model.Campus;
 import model.Libro;
 import model.Sede;
-
+import model.ArbolAVL;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -25,13 +24,15 @@ public class LibreriaApp {
     private JTextArea biografiaAutorArea;
     private JTextArea resultadoArea;
     private List<Libro> libros;
+    CustomDialog dialog;
+    ArbolAVL arbolAVL = new ArbolAVL();
 
     public LibreriaApp() {
         libros = new ArrayList<>();
 
         frame = new JFrame("Librería App");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(1200, 600);
+        frame.setSize(1400, 600);
         frame.setLayout(new BorderLayout());
 
         // Panel para ingresar datos del libro
@@ -101,12 +102,14 @@ public class LibreriaApp {
         buscarButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 buscarLibro();
+                abrirVentanaBusqueda();
             }
         });
 
         eliminarButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 eliminarLibro();
+                abrirVentanaEliminacion();
             }
         });
 
@@ -127,25 +130,128 @@ public class LibreriaApp {
 
         // Validar y crear objetos Libro, Sede, Campus y Autor
         try {
-            // Validaciones y creación de objetos
+            // Verificar que los campos no estén vacíos
+            if (titulo.isEmpty() || editorial.isEmpty() || nombreAutor.isEmpty() || apellidoAutor.isEmpty() || biografiaAutor.isEmpty()) {
+                throw new IllegalArgumentException("Todos los campos deben estar llenos.");
+            }
+            // Realizar la validación del código ISBN como una cadena de 13 dígitos
+            if (!isbn.matches("\\d{13}")) {
+                throw new IllegalArgumentException("El código ISBN debe contener exactamente 13 dígitos numericos.");
+            }
 
-            // Crear instancia de Libro y agregarla a la lista de libros
-            Libro nuevoLibro = new Libro(titulo, isbn, Integer.parseInt(volumen), editorial, new Sede(sede), new Campus(campus), new Autor(nombreAutor, apellidoAutor, biografiaAutor));
-            libros.add(nuevoLibro);
+            // Crear objetos Libro, Sede, Campus y Autor
+            Sede sedeObj = new Sede(sede);
+            Campus campusObj = new Campus(campus);
+            Autor autor = new Autor(nombreAutor, apellidoAutor, biografiaAutor);
+            Libro nuevoLibro = new Libro(titulo, isbn, Integer.parseInt(volumen), editorial, sedeObj, campusObj, autor);
+
+            // Agregar el libro a la lista de libros
+            arbolAVL.insertar(nuevoLibro);
+
+            // Limpiar campos de entrada
+           limpiarCampos();
 
             // Actualizar el área de visualización
             resultadoArea.setText("Libro agregado:\n" + nuevoLibro.toString());
-        } catch (Exception ex) {
-            // Manejar errores de validación o creación de objetos
-            resultadoArea.setText("Error al agregar el libro:\n" + ex.getMessage());
+            dialog = new CustomDialog("Libro agregado", "Se agregó el libro correctamente:\n" + nuevoLibro.toString());
+            dialog.showDialog();
+        } catch (NumberFormatException ex) {
+            resultadoArea.setText("El volumen debe ser un número válido.");
+            dialog = new CustomDialog("Error", "Se ha producido un error al digitar la información:\nVolumen debe ser un número entero");
+            dialog.showDialog();
+        } catch (IllegalArgumentException ex) {
+            resultadoArea.setText("Error: " + ex.getMessage());
+            dialog = new CustomDialog("Error: ", "Se ha producido un error al digitar la informacion: \n" + ex.getMessage());
+            dialog.showDialog();
         }
     }
 
     private void buscarLibro() {
-        // Implementar lógica de búsqueda y actualizar el área de visualización con los resultados
+        arbolAVL.buscar(String.valueOf(tituloField));
+
     }
 
     private void eliminarLibro() {
-        // Implementar lógica de eliminación y actualizar el área de visualización con los resultados
+      arbolAVL.eliminar(String.valueOf(tituloField));
+
     }
-}
+    // implementacion del metodo para limpiar los campos despues de agregar un libro
+    private void limpiarCampos() {
+        tituloField.setText("");
+        isbnField.setText("");
+        volumenField.setText("");
+        editorialField.setText("");
+        nombreAutorField.setText("");
+        apellidoAutorField.setText("");
+        biografiaAutorArea.setText("");
+        sedeComboBox.setSelectedIndex(0); // Establecer el primer elemento como seleccionado en el JComboBox de sedes
+        campusComboBox.setSelectedIndex(0); // Establecer el primer elemento como seleccionado en el JComboBox de campus
+    }
+    private void abrirVentanaBusqueda() {
+        JFrame ventanaBusqueda = new JFrame("Búsqueda de Libro");
+        ventanaBusqueda.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        ventanaBusqueda.setSize(800, 700);
+        ventanaBusqueda.setLayout(new FlowLayout());
+
+        JTextField buscarTituloField = new JTextField(20);
+        JButton buscarButton = new JButton("Buscar");
+
+        buscarButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                String tituloBusqueda = buscarTituloField.getText();
+                Libro libroEncontrado = arbolAVL.buscar(tituloBusqueda);
+
+                if (libroEncontrado != null) {
+                    // Crear una instancia de la ventana personalizada y mostrarla
+                    CustomDialog dialog = new CustomDialog("Libro encontrado", libroEncontrado.toString());
+                    dialog.showDialog();
+                } else {
+                    // Crear una instancia de la ventana personalizada para mostrar un mensaje de "Libro no encontrado"
+                    CustomDialog dialog = new CustomDialog("Libro no encontrado", "El libro no se encontró en la base de datos.");
+                    dialog.showDialog();
+                }
+            }
+        });
+
+        ventanaBusqueda.add(new JLabel("Título del Libro:"));
+        ventanaBusqueda.add(buscarTituloField);
+        ventanaBusqueda.add(buscarButton);
+
+        ventanaBusqueda.setVisible(true);
+    }
+
+    private void abrirVentanaEliminacion() {
+        JFrame ventanaEliminar= new JFrame("Eliminar libro");
+        ventanaEliminar.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        ventanaEliminar.setSize(800, 700);
+        ventanaEliminar.setLayout(new FlowLayout());
+
+        JTextField eliminarTituloField = new JTextField(20);
+        JButton eliminarButton = new JButton("Eliminar");
+
+        eliminarButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                String tituloEliminar = eliminarTituloField.getText();
+                boolean libroEncontrado = arbolAVL.eliminar(tituloEliminar);
+
+
+
+                if (tituloEliminar != null) {
+                    // Crear una instancia de la ventana personalizada y mostrarla
+                    CustomDialog dialog = new CustomDialog("Libro encontrado y eliminado: ", tituloEliminar);
+                    dialog.showDialog();
+                } else {
+                    // Crear una instancia de la ventana personalizada para mostrar un mensaje de "Libro no encontrado"
+                    CustomDialog dialog = new CustomDialog("Libro no encontrado", "El libro no se encontró en la base de datos.");
+                    dialog.showDialog();
+                }
+            }
+        });
+        ventanaEliminar.add(new JLabel("Título del Libro:"));
+        ventanaEliminar.add(eliminarTituloField);
+        ventanaEliminar.add(eliminarButton);
+
+        ventanaEliminar.setVisible(true);
+            }
+
+        }
