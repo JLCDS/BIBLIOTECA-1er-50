@@ -118,8 +118,9 @@ public class ArbolAVL {
     }
 
     // Método para eliminar un libro por su código ISBN
-    public void eliminar(String titulo) {
+    public boolean eliminar(String titulo) {
         raiz = eliminar(raiz, titulo);
+        return false;
     }
 
     private Nodo eliminar(Nodo nodo, String titulo) {

@@ -105,5 +105,14 @@ public class Libro implements Comparable<Libro> {
         return this.titulo.compareTo(otroLibro.titulo);
     }
 
-
+    @Override
+    public String toString() {
+        return "Titulo: " + titulo + '\n' +
+                "CodigoISBN: " + codigoISBN + '\n' +
+                "Volumen: " + volumen + '\n' +
+                "Editorial: " + editorial + '\n' +
+                sede +
+                campus +
+                autor ;
+    }
 }
